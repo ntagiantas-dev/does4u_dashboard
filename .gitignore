@@ -10,3 +10,6 @@ venv/
 *.egg-info/
 build/
 dist/
+*.save
+*.bak
+*~
