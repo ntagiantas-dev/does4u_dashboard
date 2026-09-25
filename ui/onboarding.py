@@ -24,11 +24,13 @@ PROVIDER_LABELS = {
 
 ONBOARDING_CSS = """
 <style>
-.d4u-ob-wrapper {
-    max-width: 640px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+/* Onboarding page - centered max-width layout */
+[data-testid="stMainBlockContainer"] {
+    max-width: 720px !important;
+    margin: 0 auto !important;
+    padding-top: 1rem !important;
 }
+
 .d4u-ob-hero {
     text-align: center;
     margin-bottom: 2rem;
@@ -83,6 +85,16 @@ ONBOARDING_CSS = """
     font-size: 0.75rem;
     margin-top: 2rem;
 }
+
+/* Premium card look για τα βήματα (Streamlit native) */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.d4u-ob-step) {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+}
 </style>
 """
 
@@ -130,104 +142,101 @@ def _render_hero() -> None:
 
 
 def _render_provider_step() -> str:
-    st.markdown('<div class="d4u-ob-card">', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="d4u-ob-step">{t("onboarding.step_provider")}</div>'
-        f'<div class="d4u-ob-hint">{t("onboarding.step_provider_hint")}</div>',
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="d4u-ob-step">{t("onboarding.step_provider")}</div>'
+            f'<div class="d4u-ob-hint">{t("onboarding.step_provider_hint")}</div>',
+            unsafe_allow_html=True,
+        )
 
-    providers = list(PROVIDER_LABELS.keys())
-    current = st.session_state.ob_provider
-    try:
-        idx = providers.index(current)
-    except ValueError:
-        idx = 0
+        providers = list(PROVIDER_LABELS.keys())
+        current = st.session_state.ob_provider
+        try:
+            idx = providers.index(current)
+        except ValueError:
+            idx = 0
 
-    chosen = st.selectbox(
-        t("onboarding.provider_label"),
-        options=providers,
-        index=idx,
-        format_func=lambda p: PROVIDER_LABELS.get(p, p),
-        key="ob_provider_select",
-    )
-    st.session_state.ob_provider = chosen
-    st.markdown('</div>', unsafe_allow_html=True)
-    return chosen
+        chosen = st.selectbox(
+            t("onboarding.provider_label"),
+            options=providers,
+            index=idx,
+            format_func=lambda p: PROVIDER_LABELS.get(p, p),
+            key="ob_provider_select",
+        )
+        st.session_state.ob_provider = chosen
+        return chosen
 
 
 def _render_key_step(provider: str) -> str:
-    st.markdown('<div class="d4u-ob-card">', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="d4u-ob-step">{t("onboarding.step_key")}</div>'
-        f'<div class="d4u-ob-hint">{t("onboarding.step_key_hint")}</div>',
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="d4u-ob-step">{t("onboarding.step_key")}</div>'
+            f'<div class="d4u-ob-hint">{t("onboarding.step_key_hint")}</div>',
+            unsafe_allow_html=True,
+        )
 
-    existing = cm.get_api_key(provider)
-    key = st.text_input(
-        t("onboarding.key_label"),
-        value=existing,
-        type="password",
-        placeholder=t("onboarding.key_placeholder"),
-        key=f"ob_key_{provider}",
-    )
+        existing = cm.get_api_key(provider)
+        key = st.text_input(
+            t("onboarding.key_label"),
+            value=existing,
+            type="password",
+            placeholder=t("onboarding.key_placeholder"),
+            key=f"ob_key_{provider}",
+        )
 
-    st.markdown(
-        f'<div class="d4u-ob-warning">{t("onboarding.privacy_warning")}</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-    return key
+        st.markdown(
+            f'<div class="d4u-ob-warning">{t("onboarding.privacy_warning")}</div>',
+            unsafe_allow_html=True,
+        )
+        return key
 
 
 def _render_prefs_step() -> tuple:
-    st.markdown('<div class="d4u-ob-card">', unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="d4u-ob-step">{t("onboarding.step_prefs")}</div>',
-        unsafe_allow_html=True,
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        langs = all_langs()
-        current_lang = st.session_state.ob_lang
-        try:
-            lang_idx = langs.index(current_lang)
-        except ValueError:
-            lang_idx = 0
-        chosen_lang = st.radio(
-            t("onboarding.lang_label"),
-            options=langs,
-            index=lang_idx,
-            format_func=lang_label,
-            key="ob_lang_radio",
+    with st.container(border=True):
+        st.markdown(
+            f'<div class="d4u-ob-step">{t("onboarding.step_prefs")}</div>',
+            unsafe_allow_html=True,
         )
-        st.session_state.ob_lang = chosen_lang
 
-    with col2:
-        themes = ["dark", "light"]
-        theme_labels = {
-            "dark": t("onboarding.theme_dark"),
-            "light": t("onboarding.theme_light"),
-        }
-        current_theme = st.session_state.ob_theme
-        try:
-            theme_idx = themes.index(current_theme)
-        except ValueError:
-            theme_idx = 0
-        chosen_theme = st.radio(
-            t("onboarding.theme_label"),
-            options=themes,
-            index=theme_idx,
-            format_func=lambda x: theme_labels.get(x, x),
-            key="ob_theme_radio",
-        )
-        st.session_state.ob_theme = chosen_theme
+        col1, col2 = st.columns(2)
 
-    st.markdown('</div>', unsafe_allow_html=True)
-    return chosen_lang, chosen_theme
+        with col1:
+            langs = all_langs()
+            current_lang = st.session_state.ob_lang
+            try:
+                lang_idx = langs.index(current_lang)
+            except ValueError:
+                lang_idx = 0
+            chosen_lang = st.radio(
+                t("onboarding.lang_label"),
+                options=langs,
+                index=lang_idx,
+                format_func=lang_label,
+                key="ob_lang_radio",
+            )
+            st.session_state.ob_lang = chosen_lang
+
+        with col2:
+            themes = ["dark", "light"]
+            theme_labels = {
+                "dark": t("onboarding.theme_dark"),
+                "light": t("onboarding.theme_light"),
+            }
+            current_theme = st.session_state.ob_theme
+            try:
+                theme_idx = themes.index(current_theme)
+            except ValueError:
+                theme_idx = 0
+            chosen_theme = st.radio(
+                t("onboarding.theme_label"),
+                options=themes,
+                index=theme_idx,
+                format_func=lambda x: theme_labels.get(x, x),
+                key="ob_theme_radio",
+            )
+            st.session_state.ob_theme = chosen_theme
+
+        return chosen_lang, chosen_theme
 
 
 def _render_actions(provider: str, api_key: str, lang: str, theme: str) -> None:
@@ -269,7 +278,6 @@ def render_onboarding() -> None:
     apply_theme(st.session_state.ob_theme)
     st.markdown(ONBOARDING_CSS, unsafe_allow_html=True)
 
-    st.markdown('<div class="d4u-ob-wrapper">', unsafe_allow_html=True)
     _render_hero()
 
     provider = _render_provider_step()
@@ -287,4 +295,3 @@ def render_onboarding() -> None:
         f'<div class="d4u-ob-footer">{t("onboarding.footer")}</div>',
         unsafe_allow_html=True,
     )
-    st.markdown('</div>', unsafe_allow_html=True)
