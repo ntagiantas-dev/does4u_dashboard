@@ -247,7 +247,7 @@ def _render_errors(registry: PluginRegistry) -> None:
 def _render_footer() -> None:
     st.markdown(
         '<div class="d4u-sidebar-footer">'
-        f'Phase 1.7 • {t("app.tagline")}'
+        f'v0.1 • {t("app.tagline")}'
         '</div>',
         unsafe_allow_html=True,
     )

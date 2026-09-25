@@ -172,8 +172,3 @@ def render_home(registry: Optional[PluginRegistry]) -> None:
 
     _render_missing_key_alert()
     _render_stats(registry)
-
-    st.markdown(
-        f'<div class="d4u-home-hint">{t("home.subtitle")}</div>',
-        unsafe_allow_html=True,
-    )

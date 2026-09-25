@@ -1,0 +1,43 @@
+name: hello_world
+version: 1.0.0
+description: "Δοκιμαστικό plugin — λέει γεια και κάνει echo"
+category: "Examples"
+author: "does4u"
+icon: "👋"
+color: "#FFC000"
+requires:
+  llm: false
+  internet: false
+
+tools:
+  - name: greet
+    description: "Χαιρετάει τον χρήστη με το όνομά του"
+    parameters:
+      - name: name
+        type: string
+        description: "Το όνομα του χρήστη"
+        required: true
+      - name: language
+        type: string
+        description: "Γλώσσα χαιρετισμού (el ή en)"
+        required: false
+        default: "el"
+    returns:
+      type: string
+      description: "Ο χαιρετισμός"
+
+  - name: echo
+    description: "Επαναλαμβάνει το μήνυμα που του δίνεις"
+    parameters:
+      - name: message
+        type: string
+        description: "Το μήνυμα"
+        required: true
+      - name: times
+        type: integer
+        description: "Πόσες φορές να το επαναλάβει"
+        required: false
+        default: 1
+    returns:
+      type: string
+      description: "Το μήνυμα επαναλαμβανόμενο"
