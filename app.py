@@ -1,6 +1,32 @@
+"""does4u Dashboard — entry point.
+
+Flow:
+1. set_page_config
+2. Init session state (theme/lang από config_manager)
+3. Onboarding check → αν χρειάζεται, render, STOP
+4. Φόρτωση plugins από registry
+5. Render sidebar
+6. Render plugin page ή home
+"""
+
+from pathlib import Path
+
 import streamlit as st
+
 from config.theme import apply_theme, DEFAULT_THEME
-from config.i18n import t, get_lang, set_lang, all_langs, lang_label
+from config.i18n import get_lang, set_lang
+from core import config_manager as cm
+from core.plugin_registry import PluginRegistry
+from ui.onboarding import render_onboarding, is_onboarding_needed
+from ui.sidebar import render_sidebar, get_active_plugin, set_active_plugin
+from ui.plugin_page import render_plugin_page
+from ui.home import render_home
+
+
+PLUGINS_DIR = Path(__file__).parent / "plugins"
+
+
+# ---------- Page config ----------
 
 st.set_page_config(
     page_title="does4u Dashboard",
@@ -9,91 +35,66 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-if "theme_mode" not in st.session_state:
-    st.session_state.theme_mode = DEFAULT_THEME
+
+# ---------- Session state init ----------
+
+def _init_session() -> None:
+    """Συγχρονίζει session_state με το persisted config."""
+    if "theme_mode" not in st.session_state:
+        st.session_state.theme_mode = cm.get_theme() or DEFAULT_THEME
+    if "lang" not in st.session_state:
+        st.session_state.lang = cm.get_language() or get_lang()
+    if "active_plugin" not in st.session_state:
+        st.session_state.active_plugin = None
+
+
+_init_session()
+
+
+# ---------- Onboarding gate ----------
+
+if is_onboarding_needed():
+    render_onboarding()
+    st.stop()
+
+
+# ---------- Apply theme ----------
 
 apply_theme(st.session_state.theme_mode)
 
-with st.sidebar:
-    st.markdown(f"## {t('sidebar.brand')}")
-    st.caption(t("app.tagline"))
 
-    st.markdown("---")
+# ---------- Load plugins ----------
 
-    is_dark = st.session_state.theme_mode == "dark"
-    new_val = st.toggle(t("sidebar.theme_dark"), value=is_dark, key="dark_toggle")
-    if new_val != is_dark:
-        st.session_state.theme_mode = "dark" if new_val else "light"
-        st.rerun()
+@st.cache_resource(show_spinner=False)
+def _get_registry() -> PluginRegistry:
+    """Φορτώνει τα plugins ΜΙΑ φορά (cache).
 
-    st.markdown("---")
+    Για refresh κατά την ανάπτυξη: Ctrl+C + restart streamlit.
+    """
+    reg = PluginRegistry(PLUGINS_DIR)
+    reg.load_all()
+    return reg
 
-    langs = all_langs()
-    current_lang = get_lang()
-    current_index = langs.index(current_lang) if current_lang in langs else 0
-    chosen = st.radio(
-        t("sidebar.language"),
-        options=langs,
-        index=current_index,
-        format_func=lang_label,
-        key="lang_radio",
-    )
-    if chosen != current_lang:
-        set_lang(chosen)
-        st.rerun()
 
-    st.markdown("---")
-    st.caption(t("app.phase"))
+registry = _get_registry()
 
-st.markdown(f'<div class="d4u-title">{t("welcome.title")}</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="d4u-subtitle">{t("welcome.subtitle")}</div>', unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(t("metric.progress"), "5/45", t("metric.progress_delta"))
-with col2:
-    st.metric(t("metric.plugins"), "0", t("metric.plugins_delta"))
-with col3:
-    st.metric(t("metric.theme"), "Dark/Light", t("metric.theme_delta"))
+# ---------- Sidebar ----------
 
-st.markdown("---")
+render_sidebar(registry)
 
-col1, col2, col3, col4 = st.columns([1, 1, 1, 3])
-with col1:
-    st.button(t("button.primary"), use_container_width=True)
-with col2:
-    st.button(t("button.accent"), type="primary", use_container_width=True)
-with col3:
-    st.button(t("button.cancel"), use_container_width=True)
 
-st.markdown("---")
+# ---------- Main content ----------
 
-st.markdown(
-    f'<div class="d4u-card">'
-    f'<h3 style="margin-top: 0;">{t("card.title")}</h3>'
-    f'<p>{t("card.body")}</p>'
-    f'</div>',
-    unsafe_allow_html=True,
-)
+active_name = get_active_plugin()
 
-st.write("")
-
-st.success(t("alert.success"))
-st.warning(t("alert.warning"))
-st.error(t("alert.error"))
-
-st.markdown("---")
-
-col1, col2 = st.columns(2)
-with col1:
-    st.text_input(t("input.name"), placeholder=t("input.name_placeholder"))
-    st.number_input(t("input.amount"), min_value=0.0, value=100.0)
-with col2:
-    st.text_area(t("input.notes"), placeholder=t("input.notes_placeholder"))
-    st.selectbox(
-        t("input.select"),
-        [t("input.select_option") + " 1", t("input.select_option") + " 2", t("input.select_option") + " 3"],
-    )
-
-st.markdown("---")
-st.caption(f"🎨 {t('app.title')} • {t('app.phase')}")
+if active_name is None:
+    render_home(registry)
+else:
+    plugin = registry.get(active_name)
+    if plugin is None:
+        # Το plugin υπήρχε αλλά εξαφανίστηκε (π.χ. σβήστηκε ο φάκελος)
+        set_active_plugin(None)
+        render_home(registry)
+    else:
+        render_plugin_page(plugin)
